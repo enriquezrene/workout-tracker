@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check, ChevronDown, Dumbbell, Plus } from '@lucide/vue'
+import ExerciseVisual from './ExerciseVisual.vue'
 import SetRow from './SetRow.vue'
 import type { ExerciseLog, RoutineDefinition, WorkoutSet } from '../../domain/models'
 import { formatNumber } from '@/shared/utilities/formatters'
@@ -67,13 +68,14 @@ const textareaValue = (event: Event) => (event.target as HTMLTextAreaElement).va
         role="region"
         :aria-label="`${exercise.name} workout details`"
       >
+        <ExerciseVisual :exercise-id="exercise.id" />
         <div class="exercise-meta">
           <div>
             <span>Target</span><strong>{{ exercise.prescription }}</strong
             ><small v-if="exercise.suggested">{{ exercise.suggested }}</small>
           </div>
           <div>
-            <span>Previous</span><strong>{{ props.previousDate(exercise) || 'No history' }}</strong>
+            <span>Last training date</span><strong>{{ props.previousDate(exercise) || 'No history' }}</strong>
           </div>
           <div>
             <span>Volume</span><strong>{{ formatNumber(props.exerciseVolume(exercise)) }} kg</strong>
@@ -82,8 +84,7 @@ const textareaValue = (event: Event) => (event.target as HTMLTextAreaElement).va
         <div class="sets-table" role="table" :aria-label="`${exercise.name} sets`">
           <div class="set-head" role="row">
             <span>Set</span><span>Previous</span><span>kg</span
-            ><span>{{ exercise.unit === 'sec' ? 'Sec' : 'Reps' }}</span
-            ><span><Check :size="16" aria-hidden="true" /></span>
+            ><span>{{ exercise.unit === 'sec' ? 'Sec' : 'Reps' }}</span>
           </div>
           <SetRow
             v-for="(set, setIndex) in exercise.sets"
@@ -235,13 +236,10 @@ h2 {
   min-height: 34px;
   padding: 5px 6px;
   color: var(--muted);
+  text-align: center;
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
-}
-.set-head span:last-child {
-  display: flex;
-  justify-content: center;
 }
 .notes-field {
   display: grid;

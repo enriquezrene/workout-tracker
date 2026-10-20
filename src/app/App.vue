@@ -1,35 +1,99 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { BarChart3, CalendarDays, Dumbbell } from '@lucide/vue'
+import AuthView from '@/features/auth/presentation/AuthView.vue'
+import UserMenu from '@/features/auth/presentation/UserMenu.vue'
+import { createAuthController } from '@/features/auth/presentation/useAuthController'
+import { SupabaseAuthRepository } from '@/features/auth/infrastructure/supabaseAuthRepository'
 import WorkoutView from '@/features/workout/presentation/WorkoutView.vue'
 import WeeklySummaryView from '@/features/weekly-summary/presentation/WeeklySummaryView.vue'
 import SaveToast from '@/shared/components/SaveToast.vue'
-import { createWorkoutController } from '@/features/workout/presentation/useWorkoutController'
-import { LocalStorageWorkoutRepository } from '@/features/workout/infrastructure/localStorageWorkoutRepository'
+import {
+  createWorkoutController,
+  type WorkoutController,
+} from '@/features/workout/presentation/useWorkoutController'
+import {
+  createUserScopedWorkoutRepository,
+  LocalStorageWorkoutRepository,
+} from '@/features/workout/infrastructure/localStorageWorkoutRepository'
 import { browserDateProvider, browserIdGenerator } from '@/features/workout/infrastructure/browserAdapters'
+import { SupabaseWorkoutHistoryRepository } from '@/features/workout/infrastructure/supabaseWorkoutHistoryRepository'
+import { createConfiguredSupabaseClient } from '@/shared/infrastructure/supabaseClient'
 import type { ViewName } from '@/features/workout/domain/models'
 
-const repository = new LocalStorageWorkoutRepository(window.localStorage, browserDateProvider)
-const controller = createWorkoutController(repository, browserIdGenerator)
-const { saveNoticeVisible } = controller
 const activeView = ref<ViewName>('track')
+const supabaseClient = createConfiguredSupabaseClient()
+const authController = supabaseClient
+  ? createAuthController(new SupabaseAuthRepository(supabaseClient))
+  : undefined
+const controller = shallowRef<WorkoutController>()
+
+const currentUser = computed(() => authController?.user.value || null)
+const authenticationRequired = Boolean(authController)
+const authLoading = computed(
+  () => authController?.status.value === 'loading' || authController?.status.value === 'authenticating',
+)
+const authError = computed(() => authController?.errorMessage.value || '')
+
+function startLocalWorkout() {
+  controller.value?.dispose()
+  const repository = new LocalStorageWorkoutRepository(window.localStorage, browserDateProvider)
+  controller.value = createWorkoutController(repository, browserIdGenerator)
+}
+
+function startAuthenticatedWorkout(userId: string) {
+  if (!supabaseClient) return
+  controller.value?.dispose()
+  const repository = createUserScopedWorkoutRepository(window.localStorage, browserDateProvider, userId)
+  const historyRepository = new SupabaseWorkoutHistoryRepository(supabaseClient)
+  controller.value = createWorkoutController(repository, browserIdGenerator, historyRepository)
+}
+
+if (authController) {
+  watch(
+    authController.user,
+    (user) => {
+      activeView.value = 'track'
+      if (user) startAuthenticatedWorkout(user.id)
+      else {
+        controller.value?.dispose()
+        controller.value = undefined
+      }
+    },
+    { immediate: true },
+  )
+} else {
+  startLocalWorkout()
+}
+
+const signIn = () => authController?.commands.signInWithGoogle(window.location.origin)
+const signOut = () => authController?.commands.signOut()
 </script>
 
 <template>
-  <main class="app-shell">
+  <AuthView
+    v-if="authenticationRequired && !currentUser"
+    :loading="authLoading"
+    :error-message="authError"
+    @sign-in="signIn"
+  />
+  <main v-else-if="controller" class="app-shell">
     <section class="topbar" aria-label="Workout overview">
       <div>
         <p class="eyebrow">Workout tracker</p>
         <h1>Gym log</h1>
       </div>
-      <label class="date-control"
-        ><CalendarDays :size="18" aria-hidden="true" /><span class="sr-only">Workout date</span
-        ><input
-          :value="controller.state.sessionDate"
-          type="date"
-          aria-label="Workout date"
-          @input="controller.commands.setSessionDate(($event.target as HTMLInputElement).value)"
-      /></label>
+      <div class="topbar-actions">
+        <UserMenu v-if="currentUser" :user="currentUser" @sign-out="signOut" />
+        <label class="date-control"
+          ><CalendarDays :size="18" aria-hidden="true" /><span class="sr-only">Workout date</span
+          ><input
+            :value="controller.state.sessionDate"
+            type="date"
+            aria-label="Workout date"
+            @input="controller.commands.setSessionDate(($event.target as HTMLInputElement).value)"
+        /></label>
+      </div>
     </section>
     <nav class="app-menu" aria-label="Main menu">
       <button type="button" :class="{ active: activeView === 'track' }" @click="activeView = 'track'">
@@ -46,7 +110,7 @@ const activeView = ref<ViewName>('track')
       :session-date="controller.state.sessionDate"
       @back="activeView = 'track'"
     />
-    <SaveToast :visible="saveNoticeVisible" />
+    <SaveToast :visible="controller.saveNoticeVisible" :message="controller.saveNoticeMessage" />
   </main>
 </template>
 
@@ -62,6 +126,11 @@ const activeView = ref<ViewName>('track')
   justify-content: space-between;
   gap: 18px;
   margin-bottom: 22px;
+}
+.topbar-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
 }
 h1 {
   margin: 0;
@@ -122,6 +191,10 @@ h1 {
     align-items: stretch;
     flex-direction: column;
   }
+  .topbar-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    justify-items: stretch;
+  }
   .app-menu {
     position: sticky;
     top: 8px;
@@ -135,6 +208,9 @@ h1 {
   .app-shell {
     padding: 12px;
     padding-bottom: 102px;
+  }
+  .topbar-actions {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Check } from '@lucide/vue'
-defineProps<{ visible: boolean }>()
+defineProps<{ visible: boolean; message?: string }>()
 </script>
 <template>
   <Transition name="toast"
     ><div v-if="visible" class="save-toast" role="status">
-      <Check :size="18" aria-hidden="true" />Workout saved
+      <Check :size="18" aria-hidden="true" />{{ message || 'Workout saved' }}
     </div></Transition
   >
 </template>

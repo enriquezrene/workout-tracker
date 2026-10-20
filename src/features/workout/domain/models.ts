@@ -4,6 +4,8 @@ export type ViewName = 'track' | 'week'
 export interface WorkoutSet {
   weight: string
   reps: string
+  repsInReserve: string
+  fatigueRer: string
   done: boolean
 }
 

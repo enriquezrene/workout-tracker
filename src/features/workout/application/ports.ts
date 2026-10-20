@@ -1,8 +1,13 @@
-import type { WorkoutState } from '../domain/models'
+import type { WorkoutSession, WorkoutState } from '../domain/models'
 
 export interface WorkoutRepository {
   load(): WorkoutState
   save(state: WorkoutState): void
+}
+
+export interface WorkoutHistoryRepository {
+  list(): Promise<WorkoutSession[]>
+  save(session: WorkoutSession): Promise<void>
 }
 
 export interface IdGenerator {

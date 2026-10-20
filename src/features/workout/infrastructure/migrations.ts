@@ -11,7 +11,13 @@ const asArray = (value: unknown): any[] => (Array.isArray(value) ? value : [])
 
 function normalizeSet(value: unknown): WorkoutSet {
   if (!isRecord(value)) return createEmptySet()
-  return { weight: String(value.weight ?? ''), reps: String(value.reps ?? ''), done: value.done === true }
+  return {
+    weight: String(value.weight ?? ''),
+    reps: String(value.reps ?? ''),
+    repsInReserve: String(value.repsInReserve ?? value.rir ?? ''),
+    fatigueRer: String(value.fatigueRer ?? ''),
+    done: value.done === true,
+  }
 }
 
 function exerciseId(value: UnknownRecord): string {

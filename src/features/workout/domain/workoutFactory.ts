@@ -1,7 +1,13 @@
 import { routines } from './catalog'
 import type { ExerciseLog, RoutineDefinition, RoutineLog, WorkoutSet, WorkoutState } from './models'
 
-export const createEmptySet = (): WorkoutSet => ({ weight: '', reps: '', done: false })
+export const createEmptySet = (): WorkoutSet => ({
+  weight: '',
+  reps: '',
+  repsInReserve: '',
+  fatigueRer: '',
+  done: false,
+})
 
 export function createRoutineLog(routine: RoutineDefinition): RoutineLog {
   return {

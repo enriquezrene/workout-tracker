@@ -4,6 +4,7 @@ import ExerciseAccordion from '@/features/workout/presentation/components/Exerci
 import { createRoutineLog } from '@/features/workout/domain/workoutFactory'
 import { routines } from '@/features/workout/domain/catalog'
 import { completedSetCount, exerciseVolume, isExerciseComplete } from '@/features/workout/domain/workoutRules'
+import { exerciseVisuals } from '@/features/workout/presentation/exerciseVisuals'
 
 describe('ExerciseAccordion', () => {
   const routine = routines[0]
@@ -25,16 +26,36 @@ describe('ExerciseAccordion', () => {
 
     const weightInput = wrapper.get('input[aria-label="Barbell Squat, set 1, weight"]')
     await weightInput.setValue('40')
+    await wrapper.get('input[aria-label="Barbell Squat, set 1, repetitions"]').setValue('8')
     await wrapper.get('button[title="Mark set complete"]').trigger('click')
 
     expect(wrapper.findAll('[role="region"]')).toHaveLength(1)
+    expect(wrapper.get('[role="img"]').attributes('aria-label')).toBe('Barbell squat exercise demonstration')
     expect(wrapper.emitted('updateSet')?.[0].slice(1)).toEqual([0, 'weight', '40'])
+    expect(wrapper.emitted('updateSet')?.[1].slice(1)).toEqual([0, 'reps', '8'])
+    expect(wrapper.findAll('.set-row input')).toHaveLength(exercises[0].sets.length * 2)
+    expect(wrapper.find('input[aria-label*="reps in reserve"]').exists()).toBe(false)
+    expect(wrapper.find('input[aria-label*="fatigue RER"]').exists()).toBe(false)
     expect(wrapper.emitted('toggleSet')?.[0].slice(1)).toEqual([0, 0])
+  })
+
+  it('provides a visual for every catalog exercise', () => {
+    const exerciseIds = routines.flatMap((workoutRoutine) =>
+      workoutRoutine.exercises.map((exercise) => exercise.id),
+    )
+
+    expect(Object.keys(exerciseVisuals).sort()).toEqual(exerciseIds.sort())
   })
 
   it('marks added sets as removable', () => {
     const withExtraSet = structuredClone(exercises)
-    withExtraSet[0].sets.push({ weight: '', reps: '', done: false })
+    withExtraSet[0].sets.push({
+      weight: '',
+      reps: '',
+      repsInReserve: '',
+      fatigueRer: '',
+      done: false,
+    })
     const wrapper = mount(ExerciseAccordion, {
       props: {
         routine,
@@ -52,7 +73,13 @@ describe('ExerciseAccordion', () => {
 
   it('emits notes, add-set, and remove-set intentions', async () => {
     const withExtraSet = structuredClone(exercises)
-    withExtraSet[0].sets.push({ weight: '', reps: '', done: false })
+    withExtraSet[0].sets.push({
+      weight: '',
+      reps: '',
+      repsInReserve: '',
+      fatigueRer: '',
+      done: false,
+    })
     const wrapper = mount(ExerciseAccordion, {
       props: {
         routine,

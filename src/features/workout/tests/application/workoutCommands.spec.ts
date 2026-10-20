@@ -41,7 +41,18 @@ describe('workout commands', () => {
       totalSets: 4,
       totalVolume: 80,
       exercises: [
-        { ...exercise, sets: [{ weight: date.endsWith('22') ? '20' : '10', reps: '8', done: true }] },
+        {
+          ...exercise,
+          sets: [
+            {
+              weight: date.endsWith('22') ? '20' : '10',
+              reps: '8',
+              repsInReserve: '2',
+              fatigueRer: '7',
+              done: true,
+            },
+          ],
+        },
       ],
     }))
     expect(findPreviousExercise(state, exercise)?.exercise.sets[0].weight).toBe('20')

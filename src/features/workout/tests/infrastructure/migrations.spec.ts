@@ -33,7 +33,13 @@ describe('workout persistence migrations', () => {
       name: 'Barbell Squat',
       notes: 'steady',
     })
-    expect(state.workout['day-1'].exercises[0].sets[0]).toEqual({ weight: '40', reps: '8', done: false })
+    expect(state.workout['day-1'].exercises[0].sets[0]).toEqual({
+      weight: '40',
+      reps: '8',
+      repsInReserve: '',
+      fatigueRer: '',
+      done: false,
+    })
   })
 
   it('returns defaults for malformed state', () => {

@@ -19,8 +19,8 @@ const exercise = (sets: ExerciseLog['sets']): ExerciseLog => ({
 describe('workout rules', () => {
   it('counts and totals checked sets only', () => {
     const log = exercise([
-      { weight: '20', reps: '8', done: true },
-      { weight: '30', reps: '10', done: false },
+      { weight: '20', reps: '8', repsInReserve: '2', fatigueRer: '7', done: true },
+      { weight: '30', reps: '10', repsInReserve: '1', fatigueRer: '8', done: false },
     ])
     expect(completedSetCount(log)).toBe(1)
     expect(exerciseVolume(log)).toBe(160)
@@ -30,8 +30,8 @@ describe('workout rules', () => {
   it('calculates progress across exercises', () => {
     expect(
       workoutProgress([
-        exercise([{ weight: '', reps: '', done: true }]),
-        exercise([{ weight: '', reps: '', done: false }]),
+        exercise([{ weight: '', reps: '', repsInReserve: '', fatigueRer: '', done: true }]),
+        exercise([{ weight: '', reps: '', repsInReserve: '', fatigueRer: '', done: false }]),
       ]),
     ).toBe(50)
   })

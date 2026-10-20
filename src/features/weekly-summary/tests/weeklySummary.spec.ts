@@ -20,7 +20,7 @@ describe('weekly summary', () => {
           prescription: '1 x 8',
           notes: '',
           defaultSets: 1,
-          sets: [{ weight: '10', reps: '8', done: true }],
+          sets: [{ weight: '10', reps: '8', repsInReserve: '2', fatigueRer: '7', done: true }],
         },
       ],
     }

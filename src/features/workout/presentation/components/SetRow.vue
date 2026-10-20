@@ -11,7 +11,12 @@ defineProps<{
   canRemove: boolean
   exerciseName: string
 }>()
-defineEmits<{ weight: [value: string]; reps: [value: string]; toggle: []; remove: [] }>()
+defineEmits<{
+  weight: [value: string]
+  reps: [value: string]
+  toggle: []
+  remove: []
+}>()
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value
 </script>
 
@@ -102,6 +107,8 @@ input {
   white-space: nowrap;
 }
 .set-actions {
+  grid-column: 5;
+  grid-row: 1;
   display: flex;
   justify-content: flex-end;
   gap: 4px;

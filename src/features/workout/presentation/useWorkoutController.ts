@@ -1,5 +1,5 @@
 import { computed, reactive, readonly, ref, watch } from 'vue'
-import type { IdGenerator, WorkoutRepository } from '../application/ports'
+import type { IdGenerator, WorkoutHistoryRepository, WorkoutRepository } from '../application/ports'
 import {
   addSet,
   createSession,
@@ -23,9 +23,15 @@ import {
   workoutVolume,
 } from '../domain/workoutRules'
 
-export function createWorkoutController(repository: WorkoutRepository, idGenerator: IdGenerator) {
+export function createWorkoutController(
+  repository: WorkoutRepository,
+  idGenerator: IdGenerator,
+  historyRepository?: WorkoutHistoryRepository,
+) {
   const state = reactive(repository.load())
   const saveNoticeVisible = ref(false)
+  const saveNoticeMessage = ref('Workout saved')
+  const syncStatus = ref<'local' | 'syncing' | 'synced' | 'error'>(historyRepository ? 'syncing' : 'local')
   let toastTimer: ReturnType<typeof setTimeout> | undefined
 
   const currentRoutine = computed(
@@ -41,7 +47,8 @@ export function createWorkoutController(repository: WorkoutRepository, idGenerat
   const completedExercises = computed(() => currentLog.value.exercises.filter(isExerciseComplete).length)
   const latestSession = computed(() => state.history[0] || null)
 
-  watch(state, () => repository.save(state), { deep: true })
+  let disposed = false
+  const stopPersistence = watch(state, () => repository.save(state), { deep: true })
 
   const commands = {
     selectRoutine: (routineId: string) => selectRoutine(state, routineId),
@@ -66,17 +73,59 @@ export function createWorkoutController(repository: WorkoutRepository, idGenerat
     },
     reset: () => resetRoutine(state, currentRoutine.value),
     save: () => {
-      state.history.unshift(createSession(state, currentRoutine.value, idGenerator.generate()))
-      state.history = state.history.slice(0, 12)
+      const session = createSession(state, currentRoutine.value, idGenerator.generate())
+      state.history.unshift(session)
+      saveNoticeMessage.value = historyRepository ? 'Workout saved locally' : 'Workout saved'
       saveNoticeVisible.value = true
       clearTimeout(toastTimer)
       toastTimer = setTimeout(() => {
         saveNoticeVisible.value = false
       }, 2400)
+      if (historyRepository) void saveToCloud(session)
     },
     clearHistory: () => {
       state.history = []
     },
+  }
+
+  async function saveToCloud(session: (typeof state.history)[number]) {
+    syncStatus.value = 'syncing'
+    try {
+      await historyRepository!.save(session)
+      if (disposed) return
+      syncStatus.value = 'synced'
+      saveNoticeMessage.value = 'Workout saved to cloud'
+    } catch {
+      if (disposed) return
+      syncStatus.value = 'error'
+      saveNoticeMessage.value = 'Saved locally; cloud sync failed'
+    }
+  }
+
+  async function synchronizeHistory() {
+    if (!historyRepository) return
+    syncStatus.value = 'syncing'
+    try {
+      const remoteSessions = await historyRepository.list()
+      if (disposed) return
+      const sessions = new Map(remoteSessions.map((session) => [session.id, session]))
+      state.history.forEach((session) => sessions.set(session.id, session))
+      state.history = [...sessions.values()].sort((a, b) => b.date.localeCompare(a.date))
+      await Promise.all(state.history.map((session) => historyRepository.save(session)))
+      if (disposed) return
+      syncStatus.value = 'synced'
+    } catch {
+      if (disposed) return
+      syncStatus.value = 'error'
+    }
+  }
+
+  void synchronizeHistory()
+
+  const dispose = () => {
+    disposed = true
+    stopPersistence()
+    clearTimeout(toastTimer)
   }
 
   return {
@@ -90,6 +139,9 @@ export function createWorkoutController(repository: WorkoutRepository, idGenerat
     completedExercises,
     latestSession,
     saveNoticeVisible: readonly(saveNoticeVisible),
+    saveNoticeMessage: readonly(saveNoticeMessage),
+    syncStatus: readonly(syncStatus),
+    dispose,
     commands,
     rules: { completedSetCount, exerciseVolume, isCompletedSet, isExerciseComplete },
     previousReference: (exercise: ExerciseLog) => findPreviousExercise(state, exercise),
