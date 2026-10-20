@@ -9,6 +9,7 @@ defineProps<{
   totalSets: number
   volume: number
   progress: number
+  disabled?: boolean
 }>()
 
 defineEmits<{ select: [routineId: string] }>()
@@ -23,6 +24,7 @@ defineEmits<{ select: [routineId: string] }>()
         class="routine-button"
         :class="{ active: routine.id === selectedRoutineId }"
         type="button"
+        :disabled="disabled"
         @click="$emit('select', routine.id)"
       >
         <span>{{ routine.name }}</span>

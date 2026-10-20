@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   completedSetCount,
+  canCompleteSet,
   exerciseVolume,
   isExerciseComplete,
   workoutProgress,
@@ -17,6 +18,15 @@ const exercise = (sets: ExerciseLog['sets']): ExerciseLog => ({
 })
 
 describe('workout rules', () => {
+  it('accepts bodyweight and timed sets but rejects missing, negative, or invalid entries', () => {
+    const set = { weight: '', reps: '8', repsInReserve: '', fatigueRer: '', done: false }
+    expect(canCompleteSet(set)).toBe(true)
+    expect(canCompleteSet({ ...set, reps: '' })).toBe(false)
+    expect(canCompleteSet({ ...set, reps: '8.5' })).toBe(false)
+    expect(canCompleteSet({ ...set, reps: '8.5' }, 'sec')).toBe(true)
+    expect(canCompleteSet({ ...set, weight: '-1' })).toBe(false)
+    expect(canCompleteSet({ ...set, weight: 'Infinity' })).toBe(false)
+  })
   it('counts and totals checked sets only', () => {
     const log = exercise([
       { weight: '20', reps: '8', repsInReserve: '2', fatigueRer: '7', done: true },

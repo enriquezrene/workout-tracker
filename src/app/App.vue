@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue'
-import { BarChart3, CalendarDays, Dumbbell } from '@lucide/vue'
+import { computed, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { BarChart3, Dumbbell } from '@lucide/vue'
 import AuthView from '@/features/auth/presentation/AuthView.vue'
 import UserMenu from '@/features/auth/presentation/UserMenu.vue'
 import { createAuthController } from '@/features/auth/presentation/useAuthController'
@@ -12,10 +12,6 @@ import {
   createWorkoutController,
   type WorkoutController,
 } from '@/features/workout/presentation/useWorkoutController'
-import {
-  createUserScopedWorkoutRepository,
-  LocalStorageWorkoutRepository,
-} from '@/features/workout/infrastructure/localStorageWorkoutRepository'
 import { browserDateProvider, browserIdGenerator } from '@/features/workout/infrastructure/browserAdapters'
 import { SupabaseWorkoutHistoryRepository } from '@/features/workout/infrastructure/supabaseWorkoutHistoryRepository'
 import { createConfiguredSupabaseClient } from '@/shared/infrastructure/supabaseClient'
@@ -29,32 +25,28 @@ const authController = supabaseClient
 const controller = shallowRef<WorkoutController>()
 
 const currentUser = computed(() => authController?.user.value || null)
-const authenticationRequired = Boolean(authController)
 const authLoading = computed(
   () => authController?.status.value === 'loading' || authController?.status.value === 'authenticating',
 )
-const authError = computed(() => authController?.errorMessage.value || '')
+const authError = computed(() =>
+  supabaseClient
+    ? authController?.errorMessage.value || ''
+    : 'Sign-in is unavailable. Please contact the app owner.',
+)
 
-function startLocalWorkout() {
-  controller.value?.dispose()
-  const repository = new LocalStorageWorkoutRepository(window.localStorage, browserDateProvider)
-  controller.value = createWorkoutController(repository, browserIdGenerator)
-}
-
-function startAuthenticatedWorkout(userId: string) {
+function startAuthenticatedWorkout() {
   if (!supabaseClient) return
   controller.value?.dispose()
-  const repository = createUserScopedWorkoutRepository(window.localStorage, browserDateProvider, userId)
   const historyRepository = new SupabaseWorkoutHistoryRepository(supabaseClient)
-  controller.value = createWorkoutController(repository, browserIdGenerator, historyRepository)
+  controller.value = createWorkoutController(historyRepository, browserDateProvider, browserIdGenerator)
 }
 
 if (authController) {
   watch(
-    authController.user,
-    (user) => {
+    () => authController.user.value?.id,
+    (userId) => {
       activeView.value = 'track'
-      if (user) startAuthenticatedWorkout(user.id)
+      if (userId) startAuthenticatedWorkout()
       else {
         controller.value?.dispose()
         controller.value = undefined
@@ -62,8 +54,17 @@ if (authController) {
     },
     { immediate: true },
   )
-} else {
-  startLocalWorkout()
+}
+
+onUnmounted(() => {
+  authController?.dispose()
+  controller.value?.dispose()
+})
+
+function setWorkoutDate(event: Event) {
+  const input = event.target as HTMLInputElement
+  controller.value?.commands.setSessionDate(input.value)
+  input.value = controller.value?.state.sessionDate || ''
 }
 
 const signIn = () => authController?.commands.signInWithGoogle(window.location.origin)
@@ -72,9 +73,10 @@ const signOut = () => authController?.commands.signOut()
 
 <template>
   <AuthView
-    v-if="authenticationRequired && !currentUser"
+    v-if="!currentUser"
     :loading="authLoading"
     :error-message="authError"
+    :disabled="!supabaseClient"
     @sign-in="signIn"
   />
   <main v-else-if="controller" class="app-shell">
@@ -84,15 +86,17 @@ const signOut = () => authController?.commands.signOut()
         <h1>Gym log</h1>
       </div>
       <div class="topbar-actions">
-        <UserMenu v-if="currentUser" :user="currentUser" @sign-out="signOut" />
         <label class="date-control"
-          ><CalendarDays :size="18" aria-hidden="true" /><span class="sr-only">Workout date</span
+          ><span class="date-label">Workout date</span
           ><input
             :value="controller.state.sessionDate"
             type="date"
             aria-label="Workout date"
-            @input="controller.commands.setSessionDate(($event.target as HTMLInputElement).value)"
+            :disabled="!controller.canEdit.value"
+            required
+            @input="setWorkoutDate"
         /></label>
+        <UserMenu v-if="currentUser" class="account-control" :user="currentUser" @sign-out="signOut" />
       </div>
     </section>
     <nav class="app-menu" aria-label="Main menu">
@@ -110,7 +114,7 @@ const signOut = () => authController?.commands.signOut()
       :session-date="controller.state.sessionDate"
       @back="activeView = 'track'"
     />
-    <SaveToast :visible="controller.saveNoticeVisible" :message="controller.saveNoticeMessage" />
+    <SaveToast :visible="controller.saveNoticeVisible.value" :message="controller.saveNoticeMessage.value" />
   </main>
 </template>
 
@@ -122,37 +126,47 @@ const signOut = () => authController?.commands.signOut()
 }
 .topbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 22px;
+  gap: 24px;
+  margin-bottom: 28px;
 }
 .topbar-actions {
-  display: grid;
-  justify-items: end;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+.account-control {
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
 }
 h1 {
   margin: 0;
   color: var(--dark);
-  font-size: clamp(2.2rem, 7vw, 4.3rem);
+  font-size: clamp(2.2rem, 5vw, 2.625rem);
   line-height: 0.95;
 }
 .date-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 46px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--panel);
-  box-shadow: var(--shadow);
+  display: grid;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.date-label {
+  color: var(--muted);
+  font-size: 0.7rem;
 }
 .date-control input {
+  width: 160px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 7px 0;
   border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   background: transparent;
   color: var(--ink);
+  font-size: 1rem;
 }
 .app-menu {
   display: inline-flex;
@@ -185,15 +199,17 @@ h1 {
 @media (max-width: 720px) {
   .app-shell {
     padding: 16px;
-    padding-bottom: 104px;
   }
   .topbar {
     align-items: stretch;
     flex-direction: column;
   }
   .topbar-actions {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    justify-items: stretch;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .account-control {
+    padding-left: 14px;
   }
   .app-menu {
     position: sticky;
@@ -207,10 +223,21 @@ h1 {
 @media (max-width: 520px) {
   .app-shell {
     padding: 12px;
-    padding-bottom: 102px;
   }
   .topbar-actions {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-areas: 'account' 'date';
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+  .account-control {
+    grid-area: account;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .date-control {
+    grid-area: date;
+    justify-self: start;
   }
 }
 </style>

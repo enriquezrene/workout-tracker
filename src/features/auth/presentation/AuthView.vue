@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Dumbbell, LogIn } from '@lucide/vue'
 
-defineProps<{ loading: boolean; errorMessage: string }>()
+defineProps<{ loading: boolean; errorMessage: string; disabled?: boolean }>()
 defineEmits<{ signIn: [] }>()
 </script>
 
@@ -12,7 +12,7 @@ defineEmits<{ signIn: [] }>()
       <p class="eyebrow">Workout tracker</p>
       <h1 id="auth-title">Sign in to Gym log</h1>
       <p class="auth-copy">Use your Google account to access your workout history.</p>
-      <button type="button" :disabled="loading" @click="$emit('signIn')">
+      <button type="button" :disabled="loading || disabled" @click="$emit('signIn')">
         <LogIn :size="19" aria-hidden="true" />
         {{ loading ? 'Connecting...' : 'Continue with Google' }}
       </button>

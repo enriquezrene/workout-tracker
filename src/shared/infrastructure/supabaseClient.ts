@@ -7,6 +7,11 @@ export function createConfiguredSupabaseClient(): SupabaseClient | undefined {
   if (!url || !publishableKey) return undefined
 
   return createClient(url, publishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    auth: {
+      storage: window.sessionStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   })
 }

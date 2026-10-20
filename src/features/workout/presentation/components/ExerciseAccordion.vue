@@ -14,6 +14,7 @@ const props = defineProps<{
   exerciseVolume: (exercise: ExerciseLog) => number
   previousDate: (exercise: ExerciseLog) => string | null
   previousSet: (exercise: ExerciseLog, index: number) => WorkoutSet | null
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -95,6 +96,7 @@ const textareaValue = (event: Event) => (event.target as HTMLTextAreaElement).va
             :set-number="setIndex + 1"
             :can-remove="setIndex >= exercise.defaultSets"
             :exercise-name="exercise.name"
+            :disabled="disabled"
             @weight="emit('updateSet', exercise, setIndex, 'weight', $event)"
             @reps="emit('updateSet', exercise, setIndex, 'reps', $event)"
             @toggle="emit('toggleSet', exercise, setIndex, exerciseIndex)"
@@ -107,10 +109,16 @@ const textareaValue = (event: Event) => (event.target as HTMLTextAreaElement).va
             :value="exercise.notes"
             rows="2"
             placeholder="Add notes for this exercise"
-            @input="emit('updateNotes', exercise, textareaValue($event))"
+            :disabled="disabled"
+            @change="emit('updateNotes', exercise, textareaValue($event))"
           />
         </label>
-        <button type="button" class="secondary-button add-set-button" @click="emit('addSet', exercise)">
+        <button
+          type="button"
+          class="secondary-button add-set-button"
+          :disabled="disabled"
+          @click="emit('addSet', exercise)"
+        >
           <Plus :size="18" aria-hidden="true" />Add set
         </button>
       </div>

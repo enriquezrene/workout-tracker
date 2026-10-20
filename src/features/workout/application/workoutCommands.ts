@@ -1,5 +1,5 @@
 import { routines } from '../domain/catalog'
-import { createEmptySet, createRoutineLog } from '../domain/workoutFactory'
+import { createEmptySet } from '../domain/workoutFactory'
 import {
   completedSetCount,
   isCompletedSet,
@@ -32,11 +32,6 @@ export function removeSet(exercise: ExerciseLog, setIndex: number): void {
 export function toggleSet(exercise: ExerciseLog, setIndex: number): void {
   const set = exercise.sets[setIndex]
   if (set) set.done = !set.done
-}
-
-export function resetRoutine(state: WorkoutState, routine: RoutineDefinition): void {
-  state.workout[routine.id] = createRoutineLog(routine)
-  state.expandedExerciseIndex = 0
 }
 
 export function createSession(state: WorkoutState, routine: RoutineDefinition, id: string): WorkoutSession {
@@ -72,6 +67,21 @@ export function findPreviousExercise(
     candidates.find(hasExercise)
   if (!session) return null
   return { date: session.date, exercise: session.exercises.find((item) => item.id === exercise.id)! }
+}
+
+export function createSessionWithToggledSet(
+  state: WorkoutState,
+  routine: RoutineDefinition,
+  id: string,
+  exerciseId: string,
+  setIndex: number,
+): WorkoutSession {
+  const session = createSession(state, routine, id)
+  const exercise = session.exercises.find((entry) => entry.id === exerciseId)
+  if (exercise) toggleSet(exercise, setIndex)
+  session.completedSets = session.exercises.reduce((sum, entry) => sum + completedSetCount(entry), 0)
+  session.totalVolume = workoutVolume({ routineId: routine.id, exercises: session.exercises })
+  return session
 }
 
 export function nextExerciseAfterCompletion(state: WorkoutState, exerciseIndex: number): number | null {

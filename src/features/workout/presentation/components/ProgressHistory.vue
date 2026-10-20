@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Activity, History, Trash2 } from '@lucide/vue'
+import { Activity, History } from '@lucide/vue'
 import type { WorkoutSession } from '../../domain/models'
 import { formatNumber } from '@/shared/utilities/formatters'
 
@@ -11,7 +11,6 @@ defineProps<{
   totalSets: number
   history: readonly WorkoutSession[]
 }>()
-defineEmits<{ clearHistory: [] }>()
 </script>
 
 <template>
@@ -40,9 +39,6 @@ defineEmits<{ clearHistory: [] }>()
         ><strong>{{ formatNumber(entry.totalVolume) }} kg</strong>
       </div>
       <p v-if="!history.length" class="empty-state">No saved workouts yet.</p>
-      <button v-if="history.length" type="button" class="clear-history" @click="$emit('clearHistory')">
-        <Trash2 :size="16" aria-hidden="true" />Clear history
-      </button>
     </div>
   </section>
 </template>
@@ -112,17 +108,6 @@ defineEmits<{ clearHistory: [] }>()
 .history-item.featured {
   border-color: rgb(47 125 109 / 34%);
   background: var(--green-soft);
-}
-.clear-history {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 38px;
-  border: 0;
-  background: transparent;
-  color: var(--danger);
-  font-weight: 800;
 }
 @media (max-width: 720px) {
   .side-panel {

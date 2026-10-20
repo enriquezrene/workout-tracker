@@ -10,6 +10,7 @@ defineProps<{
   setNumber: number
   canRemove: boolean
   exerciseName: string
+  disabled?: boolean
 }>()
 defineEmits<{
   weight: [value: string]
@@ -31,6 +32,7 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value
       min="0"
       placeholder="kg"
       :aria-label="`${exerciseName}, set ${setNumber}, weight`"
+      :disabled="disabled"
       @input="$emit('weight', inputValue($event))"
     />
     <input
@@ -40,6 +42,7 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value
       min="0"
       :placeholder="unit === 'sec' ? 'sec' : 'reps'"
       :aria-label="`${exerciseName}, set ${setNumber}, ${unit === 'sec' ? 'seconds' : 'repetitions'}`"
+      :disabled="disabled"
       @input="$emit('reps', inputValue($event))"
     />
     <div class="set-actions">
@@ -48,6 +51,9 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value
         class="icon-button check-button"
         :class="{ checked: set.done }"
         :title="set.done ? 'Mark set incomplete' : 'Mark set complete'"
+        :aria-label="`${exerciseName}, set ${setNumber}, ${set.done ? 'mark set incomplete' : 'mark set complete'}`"
+        :aria-pressed="set.done"
+        :disabled="disabled"
         @click="$emit('toggle')"
       >
         <Check :size="18" aria-hidden="true" />
@@ -57,6 +63,7 @@ const inputValue = (event: Event) => (event.target as HTMLInputElement).value
         type="button"
         class="icon-button remove-button"
         title="Remove added set"
+        :disabled="disabled"
         @click="$emit('remove')"
       >
         <Trash2 :size="16" aria-hidden="true" />

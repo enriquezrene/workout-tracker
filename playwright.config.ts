@@ -7,9 +7,14 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run preview -- --host 127.0.0.1',
+    command: 'npm run build && npm run preview -- --host 127.0.0.1',
+    env: {
+      VITE_SUPABASE_URL: 'https://workout-e2e.supabase.co',
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_e2e',
+      VITE_SUPABASE_ANON_KEY: '',
+    },
     port: 4173,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

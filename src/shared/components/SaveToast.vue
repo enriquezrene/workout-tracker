@@ -5,7 +5,7 @@ defineProps<{ visible: boolean; message?: string }>()
 <template>
   <Transition name="toast"
     ><div v-if="visible" class="save-toast" role="status">
-      <Check :size="18" aria-hidden="true" />{{ message || 'Workout saved' }}
+      <Check :size="18" aria-hidden="true" />{{ message || 'Changes saved' }}
     </div></Transition
   >
 </template>
@@ -40,7 +40,7 @@ defineProps<{ visible: boolean; message?: string }>()
 @media (max-width: 720px) {
   .save-toast {
     right: 12px;
-    bottom: 82px;
+    bottom: 12px;
     left: 12px;
     justify-content: center;
   }

@@ -1,4 +1,16 @@
-import type { ExerciseLog, RoutineLog, WorkoutSet } from './models'
+import type { ExerciseLog, ExerciseUnit, RoutineLog, WorkoutSet } from './models'
+
+export function canCompleteSet(set: WorkoutSet, unit: ExerciseUnit = 'reps'): boolean {
+  const reps = Number(set.reps)
+  const weight = Number(set.weight)
+  return (
+    Number.isFinite(reps) &&
+    reps > 0 &&
+    (unit === 'sec' || Number.isInteger(reps)) &&
+    Number.isFinite(weight) &&
+    weight >= 0
+  )
+}
 
 export const isCompletedSet = (set: WorkoutSet): boolean => set.done === true
 export const completedSetCount = (exercise: ExerciseLog): number =>

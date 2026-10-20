@@ -4,7 +4,7 @@
 
 Workout Tracker is a responsive Vue 3 and Vite application for recording gym sessions on mobile and desktop. Users select one of four workout days, expand an exercise, and record weight and repetitions for every set. The app also shows values from the previous workout, calculates progress and completed training volume, stores exercise notes, and provides a weekly summary of saved sessions.
 
-The application currently persists workout state and history in browser `localStorage`. It does not have a backend, authentication, or cross-device synchronization. Treat stored user workout data as important and preserve compatibility when changing persistence formats.
+The application requires Google authentication and stores workouts in Supabase. Each row's completion check saves to the cloud; browser storage is not used for workout drafts or history. The authentication session uses `sessionStorage` for the current browser tab. Treat saved workout data as important and preserve compatibility when changing persistence formats.
 
 ## Engineering Principles
 
@@ -29,7 +29,7 @@ src/
     workout/
       domain/             # Entities, value objects, and pure business rules
       application/        # Use cases and orchestration
-      infrastructure/     # localStorage repositories and external adapters
+      infrastructure/     # Supabase repositories and external adapters
       presentation/       # Vue components, composables, and view models
       tests/              # Feature-focused tests when colocating is clearest
     weekly-summary/
@@ -47,7 +47,7 @@ src/
 - Keep feature-specific components and helpers inside their owning feature.
 - Use `shared` only for code that is genuinely reused across features.
 - Prefer stable IDs for routines and exercises. Display names must not be used as persistence keys or domain identity.
-- Access `localStorage` through an infrastructure repository or adapter, not directly from Vue components.
+- Keep workout persistence in Supabase infrastructure adapters; do not introduce browser workout caches or local fallback storage.
 - Keep calculations such as completion, volume, and weekly aggregation as pure domain functions.
 - Let Vue components focus on rendering, input handling, and calling application use cases.
 
@@ -90,7 +90,9 @@ Testing priorities:
 - Selecting a workout day opens its first exercise.
 - Completing the final outstanding set opens the next exercise when one exists.
 - Prescribed sets cannot be removed; user-added sets can be removed.
-- Each save creates a separate workout-history entry, including repeated saves for the same day and date.
+- Each completion check saves its row in Supabase. Confirm completion only after a successful response and offer retry on failure.
+- Checks for the same routine and workout date update one stable session ID. Preserve older manually saved sessions, including repeated entries.
+- Changing the workout date restores that date's session or starts empty. Previous-session references remain read-only and use earlier dates.
 - Previous-set references come from an earlier saved session and are read-only.
 - Exercise and routine identity must remain stable across translated labels and persistence migrations.
 

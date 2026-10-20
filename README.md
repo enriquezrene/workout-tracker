@@ -1,6 +1,6 @@
 # Workout Tracker
 
-A responsive Vue 3 application for recording workout sets, weight, repetitions, notes, training volume, previous-session references, and weekly history. Local storage provides immediate offline persistence, while configured Supabase projects synchronize saved workout history. Legacy reps-in-reserve and fatigue values remain preserved in storage, but are no longer collected.
+A responsive Vue 3 application for recording workout sets, weight, repetitions, notes, training volume, previous-session references, and weekly history. Supabase is the source of truth for workouts: clicking a row's completion check saves that set immediately. Legacy reps-in-reserve and fatigue values remain preserved in saved cloud sessions, but are no longer collected.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ src/
 e2e/                      # Playwright user journeys
 ```
 
-Domain code is framework-independent. Browser persistence implements application ports, and Vue components call a typed workout controller rather than owning business rules.
+Domain code is framework-independent. Supabase persistence implements application ports, and Vue components call a typed workout controller rather than owning business rules.
 
 ## Commands
 
@@ -61,7 +61,20 @@ npm run check
    VITE_SUPABASE_PUBLISHABLE_KEY=your-public-publishable-key
    ```
 
-The application authenticates with Google, and Row Level Security restricts each user to their own sessions. Existing local history is assigned to the first Google account used in that browser, then merged and uploaded. Subsequent accounts receive separate local caches. Without the environment variables, the application continues to work locally for development and automated tests.
+The application requires Google authentication and Supabase configuration. Row Level Security restricts each user to their own sessions. The Google session uses `sessionStorage` for the current browser tab; workouts are never stored in browser storage. Missing configuration shows an unavailable sign-in screen instead of a local-only workout tracker.
+
+## Recording sets
+
+- Enter weight and repetitions (or seconds), then click the row's check. Empty weight is allowed for bodyweight exercises.
+- The check is confirmed after Supabase acknowledges the save. A failed request retains the entered values and offers Retry.
+- Subsequent checks update the same session for the selected workout date and routine. Unchecking a row updates its saved completion state.
+- Editing a checked row clears its check; click it again to save the new values. Notes save on leaving their field once a session exists, or with the first completed set otherwise.
+- Changing the workout date restores the saved session for that date. Unsaved entries remain in memory while the page is open; reloading discards unconfirmed changes.
+- Previous values come from completed sets in earlier saved sessions. Each date starts with its own saved values or an empty workout.
+
+Existing Supabase sessions, including older repeated manual saves, are preserved. The app no longer reads, writes, imports, or deletes former browser workout caches. Any entries that were only saved in the old browser cache remain there, unused by the application; they are not automatically uploaded.
+
+End-to-end tests use a simulated Supabase service and signed-in session. They prohibit access to `localStorage` and exercise completion, failures, retries, reloads, and previous-session references at desktop and 320px widths.
 
 ## Progress report
 
@@ -80,4 +93,4 @@ from public.exercise_progress
 order by date desc, exercise, set_number;
 ```
 
-Workout drafts and history are also saved under `diauno-workout-tracking-v5` in `localStorage` for offline use. Legacy v4 data is migrated without losing values or completion state.
+The existing `save_workout_session` RPC supports updating a session by its stable ID. The per-set recording flow uses that existing RPC and does not require a database migration.

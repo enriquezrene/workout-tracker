@@ -55,7 +55,3 @@ export interface WorkoutState {
   workout: Record<string, RoutineLog>
   history: WorkoutSession[]
 }
-
-export interface PersistedWorkoutStateV5 extends WorkoutState {
-  version: 5
-}

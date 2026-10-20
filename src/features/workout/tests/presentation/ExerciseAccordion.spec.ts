@@ -94,6 +94,7 @@ describe('ExerciseAccordion', () => {
     })
 
     await wrapper.get('textarea').setValue('Controlled tempo')
+    await wrapper.get('textarea').trigger('change')
     await wrapper.get('button.add-set-button').trigger('click')
     await wrapper.get('button[title="Remove added set"]').trigger('click')
 
